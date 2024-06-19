@@ -3,7 +3,6 @@ __package__ = "daliuge_plasma_components"
 from dlg import droputils, utils
 
 # extend the following as required
-from .apps import MyAppDROP
-from .data import MyDataDROP
+from .data import PlasmaDROP, PlasmaFlightDROP
 
-__all__ = ["MyAppDROP", "MyDataDROP"]
+__all__ = ["PlasmaDROP", "PlasmaFlightDROP"]

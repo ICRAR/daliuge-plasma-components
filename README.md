@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
-Awesome daliuge_plasma_components created by ICRAR
+`daliuge_plasma_components` created by ICRAR
 
 ## Installation
 
@@ -17,11 +17,7 @@ There are multiple options for the installation, depending on how you are intend
 ```bash
 pip install daliuge_plasma_components
 ```
-This will only work after releasing the project to PyPi.
-### Engine in Docker container
-```bash
-docker exec -t daliuge-engine bash -c 'pip install --prefix=$DLG_ROOT/code daliuge_plasma_components'
-```
+
 ## Usage
 For example the MyComponent component will be available to the engine when you specify 
 ```
