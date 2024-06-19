@@ -1,6 +1,6 @@
 import pytest
 
-from project_name import MyAppDROP, MyDataDROP
+from daliuge_plasma_components import MyAppDROP, MyDataDROP
 
 given = pytest.mark.parametrize
 

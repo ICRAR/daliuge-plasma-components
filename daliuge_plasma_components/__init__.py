@@ -1,4 +1,4 @@
-__package__ = "project_name"
+__package__ = "daliuge_plasma_components"
 # The following imports are the binding to the DALiuGE system
 from dlg import droputils, utils
 
