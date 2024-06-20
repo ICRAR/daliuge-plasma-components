@@ -1,2 +1,5 @@
 daliuge-engine>=2.0
 daliuge-translator>=2.0
+numpy<2.0.0
+pyarrow==3.0.0
+crc32c

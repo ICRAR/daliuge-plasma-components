@@ -27,14 +27,14 @@ install:          ## Install the project in dev mode.
 .PHONY: fmt
 fmt:              ## Format code using black & isort.
 	$(ENV_PREFIX)isort daliuge_plasma_components/
-	$(ENV_PREFIX)black -l 79 daliuge_plasma_components/
-	$(ENV_PREFIX)black -l 79 tests/
+	$(ENV_PREFIX)black -l 90 daliuge_plasma_components/
+	$(ENV_PREFIX)black -l 90 tests/
 
 .PHONY: lint
 lint:             ## Run pep8, black, mypy linters.
-	$(ENV_PREFIX)flake8 daliuge_plasma_components/
-	$(ENV_PREFIX)black -l 79 --check daliuge_plasma_components/
-	$(ENV_PREFIX)black -l 79 --check tests/
+	$(ENV_PREFIX)flake8 --ignore=E501 daliuge_plasma_components/
+	$(ENV_PREFIX)black -l 90 --check daliuge_plasma_components/
+	$(ENV_PREFIX)black -l 90 --check tests/
 	$(ENV_PREFIX)mypy --ignore-missing-imports daliuge_plasma_components/
 
 .PHONY: test
