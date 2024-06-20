@@ -26,12 +26,10 @@ Plasma Flight Client implementation
 Originally in daliuge/daliuge-engine/apps/plasmaflight.py
 """
 
-import hashlib
-from io import BytesIO
 import logging
+from io import BytesIO
 from typing import Optional
 
-import pyarrow
 import pyarrow.flight as paf
 import pyarrow.plasma as plasma
 
@@ -100,7 +98,7 @@ class PlasmaFlightClient:
         self.plasma_client.seal(object_id)
 
     def put_raw_buffer(self, data: memoryview, object_id: plasma.ObjectID):
-        """Puts  """
+        """Puts"""
         self.plasma_client.put_raw_buffer(data, object_id)
 
     def get_buffer(
@@ -139,7 +137,7 @@ class PlasmaFlightClient:
                 f"{self._scheme}://{owner}", **self._connection_args
             )
             try:
-                info = client.get_flight_info(
+                client.get_flight_info(
                     paf.FlightDescriptor.for_path(
                         object_id.binary().hex().encode("utf-8")
                     )

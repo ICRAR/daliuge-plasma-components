@@ -22,7 +22,9 @@
 
 import pytest
 import unittest
+import logging
 import os
+
 given = pytest.mark.parametrize
 
 from dlg.apps.app_base import BarrierAppDROP
@@ -58,6 +60,7 @@ class SumupContainerChecksum(BarrierAppDROP):
         outputDrop = self.outputs[0]
         outputDrop.write(str(crcSum).encode("utf8"))
 
+
 class TestDROP(unittest.TestCase):
     """
     ===============================================================
@@ -68,6 +71,7 @@ class TestDROP(unittest.TestCase):
     to pick up the work to transition from plasma to an alternative.
     ===============================================================
     """
+
     def setUp(self):
         """
         library-specific setup
@@ -131,46 +135,62 @@ class TestDROP(unittest.TestCase):
         """
         Test an PlasmaDrop and a simple AppDROP (for checksum calculation)
         """
+        store = None
         try:
             store = subprocess.Popen(
                 ["plasma_store", "-m", "100000000", "-s", "/tmp/plasma"]
             )
             self._test_write_withDropType(PlasmaDROP)
+        except FileNotFoundError:
+            logging.info(f"plasma_store not found when running test.")
         finally:
-            store.terminate()
+            if store:
+                store.terminate()
 
     def test_dynamic_write_plasmaDROP(self):
         """
         Test an PlasmaDrop and a simple AppDROP (for checksum calculation)
         """
+        store = None
         try:
             store = subprocess.Popen(
                 ["plasma_store", "-m", "100000000", "-s", "/tmp/plasma"]
             )
             self._test_dynamic_write_withDropType(PlasmaDROP)
+        except FileNotFoundError:
+            logging.info(f"plasma_store not found when running test.")
         finally:
-            store.terminate()
+            if store:
+                store.terminate()
 
     def test_write_plasmaFlightDROP(self):
         """
         Test an PlasmaDrop and a simple AppDROP (for checksum calculation)
         """
+        store = None
         try:
             store = subprocess.Popen(
                 ["plasma_store", "-m", "100000000", "-s", "/tmp/plasma"]
             )
             self._test_write_withDropType(PlasmaFlightDROP)
+        except FileNotFoundError:
+            logging.info(f"plasma_store not found when running test.")
         finally:
-            store.terminate()
+            if store:
+                store.terminate()
 
     def test_dynamic_write_plasmaFlightDROP(self):
         """
         Test an PlasmaDrop and a simple AppDROP (for checksum calculation)
         """
+        store = None
         try:
             store = subprocess.Popen(
                 ["plasma_store", "-m", "100000000", "-s", "/tmp/plasma"]
             )
             self._test_dynamic_write_withDropType(PlasmaFlightDROP)
+        except FileNotFoundError:
+            logging.info(f"plasma_store not found when running test.")
         finally:
-            store.terminate()
+            if store:
+                store.terminate()

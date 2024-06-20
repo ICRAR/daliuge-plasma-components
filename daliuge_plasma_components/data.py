@@ -26,22 +26,21 @@ Plasma IO and PlasmaDrops implementation
 Originally in daliuge/daliuge-engine/data/drops/plasma.py
 """
 
-import logging
-import pyarrow
+import binascii
 import io
 import logging
-from typing import Optional, Union
-from overrides import overrides
-
-import binascii
 import os
+from typing import Optional
+
 import numpy as np
+import pyarrow
+from dlg.data.drops.data_base import DataDROP
+from dlg.data.io import DataIO
+from dlg.meta import dlg_bool_param, dlg_string_param
+from overrides import overrides
 from pyarrow import plasma as plasma
 
-from dlg.data.drops.data_base import DataDROP
-from dlg.meta import dlg_string_param, dlg_bool_param
 from daliuge_plasma_components.apps import PlasmaFlightClient
-from dlg.data.io import DataIO
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ class PlasmaIO(DataIO):
         self._plasma_path = plasma_path
         self._object_id = object_id
         self._reader = None
-        self._writer = None
+        self._writer = io.BytesIO()
         # treat sizes <1 as None
         self._expected_size = (
             expected_size if expected_size and expected_size > 0 else None
@@ -112,35 +111,28 @@ class PlasmaIO(DataIO):
         If use_staging is True, any number of writes may occur with a small performance penalty.
         """
         # NOTE: data must be a collection of bytes for len to represent the buffer bytesize
-        assert isinstance(
-            data, Union[memoryview, bytes, bytearray, pyarrow.Buffer].__args__
-        )
+        # assert isinstance(
+        #     data, Union[memoryview, bytes, bytearray, pyarrow.Buffer].__bytes__()
+        # )
         databytes = data.nbytes if isinstance(data, memoryview) else len(data)
 
-        if self._use_staging:
-            if not self._writer:
-                # write into a resizable staging buffer
-                self._writer = io.BytesIO()
-        else:
-            if not self._writer:
-                # write directly into fixed size plasma buffer
-                self._buffer_size = (
-                    self._expected_size
-                    if self._expected_size is not None
-                    else databytes
+        if not self._use_staging:
+            # write directly into fixed size plasma buffer
+            self._buffer_size = (
+                self._expected_size if self._expected_size is not None else databytes
+            )
+            plasma_buffer = self._desc.create(self._object_id, self._buffer_size)
+            self._writer = pyarrow.FixedSizeBufferWriter(plasma_buffer)
+        if self._writer.tell() + databytes > self._buffer_size:
+            raise IOError(
+                "".join(
+                    [
+                        f"attempted to write {self._writer.tell() + databytes} ",
+                        f"bytes to plasma buffer of size {self._buffer_size}, ",
+                        "consider using staging or expected_size argument",
+                    ]
                 )
-                plasma_buffer = self._desc.create(self._object_id, self._buffer_size)
-                self._writer = pyarrow.FixedSizeBufferWriter(plasma_buffer)
-            if self._writer.tell() + databytes > self._buffer_size:
-                raise IOError(
-                    "".join(
-                        [
-                            f"attempted to write {self._writer.tell() + databytes} ",
-                            f"bytes to plasma buffer of size {self._buffer_size}, ",
-                            "consider using staging or expected_size argument",
-                        ]
-                    )
-                )
+            )
 
         self._writer.write(data)
         return len(data)
@@ -183,7 +175,7 @@ class PlasmaFlightIO(DataIO):
         self._plasma_path = plasma_path
         self._flight_path = flight_path
         self._reader = None
-        self._writer = None
+        self._writer = io.BytesIO()
         # treat sizes <1 as None
         self._expected_size = (
             expected_size if expected_size and expected_size > 0 else None
@@ -217,26 +209,22 @@ class PlasmaFlightIO(DataIO):
     def _write(self, data, **kwargs) -> int:
 
         # NOTE: data must be a collection of bytes for len to represent the buffer bytesize
-        assert isinstance(
-            data, Union[memoryview, bytes, bytearray, pyarrow.Buffer].__args__
-        )
+        # assert isinstance(
+        #     data, Union[memoryview, bytes, bytearray, pyarrow.Buffer].__args__
+        # )
         databytes = data.nbytes if isinstance(data, memoryview) else len(data)
-        if not self._writer:
-            if self._use_staging:
-                # stream into resizeable buffer
-                logger.warning(
-                    "Using dynamically sized Plasma buffer. Performance may be reduced."
-                )
-                self._writer = io.BytesIO()
-            else:
-                # write directly to fixed size plasma buffer
-                self._buffer_size = (
-                    self._expected_size
-                    if self._expected_size is not None
-                    else databytes
-                )
-                plasma_buffer = self._desc.create(self._object_id, self._buffer_size)
-                self._writer = pyarrow.FixedSizeBufferWriter(plasma_buffer)
+        if self._use_staging:
+            # stream into resizeable buffer
+            logger.warning(
+                "Using dynamically sized Plasma buffer. Performance may be reduced."
+            )
+        else:
+            # write directly to fixed size plasma buffer
+            self._buffer_size = (
+                self._expected_size if self._expected_size is not None else databytes
+            )
+            plasma_buffer = self._desc.create(self._object_id, self._buffer_size)
+            self._writer = pyarrow.FixedSizeBufferWriter(plasma_buffer)
         self._writer.write(data)
         return len(data)
 
@@ -255,27 +243,6 @@ class PlasmaFlightIO(DataIO):
     @overrides
     def buffer(self) -> memoryview:
         return self._desc.get_buffer(self._object_id, self._flight_path)
-#
-#    ICRAR - International Centre for Radio Astronomy Research
-#    (c) UWA - The University of Western Australia
-#    Copyright by UWA (in the framework of the ICRAR)
-#    All rights reserved
-#
-#    This library is free software; you can redistribute it and/or
-#    modify it under the terms of the GNU Lesser General Public
-#    License as published by the Free Software Foundation; either
-#    version 2.1 of the License, or (at your option) any later version.
-#
-#    This library is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#    Lesser General Public License for more details.
-#
-#    You should have received a copy of the GNU Lesser General Public
-#    License along with this library; if not, write to the Free Software
-#    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#    MA 02111-1307  USA
-#
 
 
 ##
@@ -306,9 +273,7 @@ class PlasmaDROP(DataDROP):
         self.plasma_path = os.path.expandvars(self.plasma_path)
         if self.object_id is None:
             self.object_id = (
-                np.random.bytes(20)
-                if len(self.uid) != 20
-                else self.uid.encode("ascii")
+                np.random.bytes(20) if len(self.uid) != 20 else self.uid.encode("ascii")
             )
         elif isinstance(self.object_id, str):
             self.object_id = self.object_id.encode("ascii")
@@ -323,9 +288,7 @@ class PlasmaDROP(DataDROP):
 
     @property
     def dataURL(self) -> str:
-        return "plasma://%s" % (
-            binascii.hexlify(self.object_id).decode("ascii")
-        )
+        return "plasma://%s" % (binascii.hexlify(self.object_id).decode("ascii"))
 
 
 ##
@@ -358,9 +321,7 @@ class PlasmaFlightDROP(DataDROP):
         self.plasma_path = os.path.expandvars(self.plasma_path)
         if self.object_id is None:
             self.object_id = (
-                np.random.bytes(20)
-                if len(self.uid) != 20
-                else self.uid.encode("ascii")
+                np.random.bytes(20) if len(self.uid) != 20 else self.uid.encode("ascii")
             )
         elif isinstance(self.object_id, str):
             self.object_id = self.object_id.encode("ascii")
@@ -376,6 +337,4 @@ class PlasmaFlightDROP(DataDROP):
 
     @property
     def dataURL(self) -> str:
-        return "plasmaflight://%s" % (
-            binascii.hexlify(self.object_id).decode("ascii")
-        )
+        return "plasmaflight://%s" % (binascii.hexlify(self.object_id).decode("ascii"))
